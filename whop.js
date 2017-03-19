@@ -5,9 +5,23 @@ var whop = whop || (function () {
 
 var node = document.createElement.bind(document);
 var elem = document.getElementById.bind(document);
+
+var holding_element;
 var stage;
-var sprites = [];
-var keyHandlers = {};
+
+function newStage() {
+  return {
+    sprites: [],
+    keyHandlers: {},
+    element: node('div')
+  };
+}
+
+function installStage(new_stage) {
+  if (stage) holding_element.removeChild(stage.element);
+  stage = new_stage;
+  holding_element.appendChild(stage.element);
+}
 
 function movenode(n, x, y) {
   n.style.left = x + 'px';
@@ -19,18 +33,19 @@ function resizenode(n, w, h) {
   n.style.height = h + 'px';
 }
 
-function img(src, x, y) {
+function img(stage, src, x, y) {
   var n = node('img');
   n.src = src;
   n.style.position = 'absolute';
   movenode(n, x, y);
-  stage.appendChild(n);
+  stage.element.appendChild(n);
   return n;
 }
 
 function makeSprite(src, x, y) {
   var xd = 0, yd = 0;
-  var node = img(src, x, y);
+  var mystage = stage;
+  var node = img(mystage, src, x, y);
   var hooks = [];
   var index_in_sprites = 0;
 
@@ -83,23 +98,23 @@ function makeSprite(src, x, y) {
     },
 
     destroy: function destroy() {
-      delete sprites[index_in_sprites];
+      delete mystage.sprites[index_in_sprites];
       node.parentElement.removeChild(node);
     }
   }
 
-  index_in_sprites = sprites.push(inst) - 1;
+  index_in_sprites = mystage.sprites.push(inst) - 1;
 
   return inst;
 }
 
 function nextFrame() {
-  sprites.forEach(function(sprite) { sprite.update(); });
+  stage.sprites.forEach(function(sprite) { sprite.update(); });
   requestAnimationFrame(nextFrame);
 }
 
 function handleKey(e) {
-  var handler = keyHandlers[e.keyCode];
+  var handler = stage.keyHandlers[e.keyCode];
   if (!handler) return true;
   handler();
   if (e.preventDefault) e.preventDefault();
@@ -107,26 +122,31 @@ function handleKey(e) {
 }
 
 function whenPressed(c, f) {
-  keyHandlers[c.charCodeAt(0)] = f;
+  stage.keyHandlers[c.charCodeAt(0)] = f;
 }
 
 function installHandler(keyCode) {
   return function handleKey(f) {
-    keyHandlers[keyCode] = f;
+    stage.keyHandlers[keyCode] = f;
   }
 }
 
+function initialise(stagename) {
+  holding_element = elem(stagename);
+  holding_element.removeChild(elem('jswarning'));
+  installStage(newStage());
+  document.onkeydown = handleKey;
+  requestAnimationFrame(nextFrame);
+}
+
 return {
-  initialise: function init(stagename) {
-    stage = elem(stagename);
-    stage.removeChild(elem('jswarning'));
-    document.onkeydown = handleKey;
-    requestAnimationFrame(nextFrame);
-  },
-  makeSprite: makeSprite,
-  handleKey: handleKey,
-  allSprites: function allSprites() { return sprites; },
-  whenPressed: whenPressed,
+  initialise: initialise, init: initialise,
+  makeSprite: makeSprite, spr: makeSprite,
+  allSprites: function allSprites() { return stage.sprites; },
+  curStage: function curStage() { return stage; },
+  newStage: newStage,
+  installStage: installStage, screen: installStage,
+  whenPressed: whenPressed, key: whenPressed,
   whenLeft: installHandler(37),
   whenUp: installHandler(38),
   whenRight: installHandler(39),
