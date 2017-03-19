@@ -9,6 +9,11 @@ var elem = document.getElementById.bind(document);
 var holding_element;
 var stage;
 
+function array_of(len, producer) {
+  return new Array(len+1).join('x').split('')
+    .map(function(_, idx) { return producer(idx); });
+}
+
 function newStage() {
   return {
     sprites: [],
@@ -40,6 +45,40 @@ function img(stage, src, x, y) {
   movenode(n, x, y);
   stage.element.appendChild(n);
   return n;
+}
+
+function makeTile(stage, pict, x, y, x_pos, y_pos) {
+  var node = img(stage, pict, x_pos, y_pos);
+  var info = {};
+  return {
+    x: function getX() { return x; },
+    y: function getY() { return y; },
+    pict: function getPict() { return pict; },
+    info: function getInfo() { return info; },
+    setPict: function setPict(new_pict) {
+      node.src = pict = new_pict;
+    }
+  };
+}
+
+function makeMap(w, h, tile_size, initialiser, x_off, y_off) {
+  x_off = x_off || 0;
+  y_off = y_off || 0;
+  tile_size = tile_size || 32;
+  initialiser = initialiser || function(x, y) { return null; };
+
+  var map = array_of(w, function(x) {
+    return array_of(h, function(y) {
+      return makeTile(stage, initialiser(x, y), x, y,
+	  x_off + x * tile_size, y_off + y * tile_size);
+    });
+  });
+
+  return function tileAt(x_pos, y_pos, raw_p) {
+    var x = raw_p ? x_pos : Math.floor((x_pos - x_off) / tile_size);
+    var y = raw_p ? y_pos : Math.floor((y_pos - y_off) / tile_size);
+    return map[x][y];
+  };
 }
 
 function makeSprite(src, x, y) {
@@ -146,6 +185,7 @@ return {
   curStage: function curStage() { return stage; },
   newStage: newStage,
   installStage: installStage, screen: installStage,
+  makeMap: makeMap, map: makeMap,
   whenPressed: whenPressed, key: whenPressed,
   whenLeft: installHandler(37),
   whenUp: installHandler(38),
