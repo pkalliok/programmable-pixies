@@ -3,17 +3,14 @@
 var ppixies = ppixies || (function () {
 
 var image_names =
-	[[" ", "grass"], "flowers",
-	"treebot", ["t", "treeover"], "treegap", "treetop"];
+	["grass", "flowers", "treebot", "treeover", "treegap", "treetop"];
 
-var img = R.fromPairs(R.chain(function (name) {
-	if ((typeof name) !== "string") {
-		var abbr = name[0];
-		name = name[1];
-	}
+var img = R.fromPairs(R.map(function (name) {
 	var file = "img/tile-" + name + ".png";
-	return [[abbr, file], [name, file]];
+	return [name, file];
 }, image_names));
+
+var terrains = { " ": "grass", "t": "tree" };
 
 var worlds = {
 1: ["ttttttttttttttt",
@@ -31,30 +28,19 @@ var worlds = {
     "ttttttttttttttt"]
 };
 
-function world_to_map(num) {
+function get_world(num) {
 	var world = worlds[num];
-	var height = world.length;
-	var width = R.reduce(R.max, 0, R.map(R.prop('length'), world));
-	return whop.makeMap(width, height, 32, function(x, y) {
-		return img[world[y].charAt(x)];
-	});
+	return function terrainAt(x, y) {
+		if (y < 0 || y >= world.length || x < 0 || x >= world[y].length)
+			return "nothing";
+		return terrains[world[y].charAt(x)];
+	};
 }
 
-function crossmap(f, ls1, ls2) {
-	return R.chain(function (e1) {
-		return R.map(function (e2) {
-			return f(e1, e2);
-		}, ls2);
-	}, ls1);
-}
-
-function map_update(f, map) {
-	var newmap = crossmap(function (x, y) {
-		function offset_tile(dx, dy) { return map.tile(x + dx, y + dy); }
-		return [x, y, f(offset_tile)];
-	}, R.range(0, map.w()), R.range(0, map.h()));
-	newmap.forEach(function (update) {
-		map.tile(update[0], update[1]).setPict(update[2]);
+function world_cobind(f, world) {
+	return R.memoize(function terrainAt(x, y) {
+		function offset_terrainAt(dx, dy) { return world(x + dx, y + dy); }
+		return f(offset_terrainAt);
 	});
 }
 
@@ -62,23 +48,36 @@ function prob(p) {
 	return Math.random() < p;
 }
 
-function choose_tile(tileAt) {
+function choose_tile(terrainAt) {
 	return {
-		"img/tile-grass.png": function grass() {
-			if (prob(.2)) return img.flowers;
-			return img.grass;
+		grass: function grass() {
+			if (prob(.2)) return "flowers";
+			return "grass";
 		},
-		"img/tile-treeover.png": function tree() {
-			if (tileAt(0, -1).pict() === "img/tile-grass.png")
-				return img.treetop;
-			if (tileAt(0, 1).pict() === "img/tile-grass.png")
-				return img.treebot;
-			if (prob(.2)) return img.treegap;
-			return img.treeover;
+		nothing: function nothing() { return "treeover"; },
+		tree: function tree() {
+			if (terrainAt(0, -1) === "grass") return "treetop";
+			if (terrainAt(0, 1) === "grass") return "treebot";
+			if (prob(.2)) return "treegap";
+			return "treeover";
 		}
-	}[tileAt(0, 0).pict()]();
+	}[terrainAt(0, 0)]();
 }
 
-return { choose_tile, map_update, world_to_map };
+var smooth_terrains = R.partial(world_cobind, [choose_tile]);
+
+function world_to_map(world, width, height) {
+	return whop.makeMap(width, height, 32, function (x, y) {
+		return img[world(x, y)];
+	});
+}
+
+function show_world(num) {
+	var height = worlds[num].length;
+	var width = R.reduce(R.max, 0, R.map(R.prop('length'), worlds[num]));
+	return world_to_map(smooth_terrains(get_world(num)), width, height);
+}
+
+return show_world;
 
 })();
