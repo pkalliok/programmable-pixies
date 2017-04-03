@@ -2,13 +2,7 @@
 
 var ppixies = ppixies || (function () {
 
-var image_names =
-	["grass", "flowers", "treebot", "treeover", "treegap", "treetop"];
-
-var img = R.fromPairs(R.map(function (name) {
-	var file = "img/tile-" + name + ".png";
-	return [name, file];
-}, image_names));
+function img(name) { return "img/tile-" + name + ".png"; }
 
 var terrains = { " ": "grass", "t": "tree" };
 
@@ -68,7 +62,7 @@ var smooth_terrains = R.partial(world_cobind, [choose_tile]);
 
 function world_to_map(world, width, height) {
 	return whop.makeMap(width, height, 32, function (x, y) {
-		return img[world(x, y)];
+		return img(world(x, y));
 	});
 }
 
