@@ -47,8 +47,9 @@ function img(stage, src, x, y) {
   return n;
 }
 
-function makeTile(stage, pict, x, y, x_pos, y_pos) {
+function makeTile(stage, pict, size, x, y, x_pos, y_pos) {
   var node = img(stage, pict, x_pos, y_pos);
+  resizenode(node, size, size);
   var info = {};
   return {
     x: function getX() { return x; },
@@ -69,16 +70,31 @@ function makeMap(w, h, tile_size, initialiser, x_off, y_off) {
 
   var map = array_of(w, function(x) {
     return array_of(h, function(y) {
-      return makeTile(stage, initialiser(x, y), x, y,
+      return makeTile(stage, initialiser(x, y), tile_size, x, y,
 	  x_off + x * tile_size, y_off + y * tile_size);
     });
   });
 
-  return function tileAt(x_pos, y_pos, raw_p) {
-    var x = raw_p ? x_pos : Math.floor((x_pos - x_off) / tile_size);
-    var y = raw_p ? y_pos : Math.floor((y_pos - y_off) / tile_size);
+  function tile(x, y) {
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x >= w) x = w - 1;
+    if (y >= h) y = h - 1;
     return map[x][y];
+  }
+
+  function tileAt(x_pos, y_pos) {
+    return tile(Math.floor((x_pos - x_off) / tile_size),
+	Math.floor((y_pos - y_off) / tile_size));
   };
+
+  return {
+    w: function getWidth() { return w; },
+    h: function getHeight() { return h; },
+    tile: tile,
+    tileAt, tileAt
+  };
+
 }
 
 function makeSprite(src, x, y) {
