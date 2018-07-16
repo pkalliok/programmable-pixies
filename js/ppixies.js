@@ -4,6 +4,8 @@ var ppixies = ppixies || (function () {
 
 function img(name) { return "img/tile-" + name + ".png"; }
 
+var list_length = R.compose(R.sum, R.map(R.always(1)))
+
 var terrains = { " ": "grass", "t": "tree" };
 
 var worlds = {
@@ -19,7 +21,21 @@ var worlds = {
     "t  ttt    tt   ",
     "t         ttttt",
     "ttttttttttttttt",
-    "ttttttttttttttt"]
+    "ttttttttttttttt"],
+2: ["tttttttttttttttttt",
+    "ttttt  ttttttttttt",
+    "ttttt      ttttttt",
+    "tt    tt   ttttttt",
+    "tt    tt      tttt",
+    "tt    tt      tttt",
+    "tt    tt      tttt",
+    "tt    tt      tttt",
+    "tt   tt   ttt  ttt",
+    "tt   tt  tttt  ttt",
+    "tt       tttt  ttt",
+    "tt        ttt  ttt",
+    "ttttt  ttttttttttt",
+    "tttttttttttttttttt"]
 };
 
 function get_world(num) {
